@@ -57,7 +57,7 @@ def evaluate(data_source, batch_size=10):
     matrix_list = []
     prior_total = 0
     for i in range(0, data_source.size(0) - 1, args.bptt):
-        data, targets = get_batch(data_source, i, args, evaluation=True)
+        data, targets = get_batch(data_source, i, args)
         targets = targets.view(-1)
         output, hidden, rnn_outs, _, prior = model(data, hidden, return_h=True)
         loss = nn.functional.nll_loss(output.view(-1, ntokens), targets).data
@@ -67,7 +67,7 @@ def evaluate(data_source, batch_size=10):
         output_numpy = output.view(-1, ntokens).data.cpu().numpy()
         matrix_list.append(output_numpy)
     matrix = np.concatenate(matrix_list)
-    return total_loss[0] / len(data_source)
+    return total_loss.item() / len(data_source)
 
 
 # Load the best saved model.

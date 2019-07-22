@@ -90,7 +90,7 @@ class RNNModel(nn.Module):
         emb = self.lockdrop(emb, self.dropouti)
         list4mos = []
         if self.num4embed > 0:
-            embed4mos = nn.functional.tanh(self.weight4embed(emb))
+            embed4mos = torch.tanh(self.weight4embed(emb))
             embed4mos = embed4mos.view(emb.size(0), emb.size(1), self.num4embed, self.ninp).transpose(1, 2).transpose(1, 0).contiguous()
             embed4mos = embed4mos.view(-1, emb.size(1), self.ninp)
             list4mos.extend(list(torch.chunk(embed4mos, self.num4embed, 0)))
@@ -110,12 +110,12 @@ class RNNModel(nn.Module):
                 raw_output = self.lockdrop(raw_output, self.dropouth)
                 outputs.append(raw_output)
                 if l == 0 and self.num4first > 0:
-                    first4mos = nn.functional.tanh(self.weight4first(raw_output))
+                    first4mos = torch.tanh(self.weight4first(raw_output))
                     first4mos = first4mos.view(raw_output.size(0), raw_output.size(1), self.num4first, self.ninp).transpose(1, 2).transpose(1, 0).contiguous()
                     first4mos = first4mos.view(-1, raw_output.size(1), self.ninp)
                     list4mos.extend(list(torch.chunk(first4mos, self.num4first, 0)))
                 if l == 1 and self.num4second > 0:
-                    second4mos = nn.functional.tanh(self.weight4second(raw_output))
+                    second4mos = torch.tanh(self.weight4second(raw_output))
                     second4mos = second4mos.view(raw_output.size(0), raw_output.size(1), self.num4second, self.ninp).transpose(1, 2).transpose(1, 0).contiguous()
                     second4mos = second4mos.view(-1, raw_output.size(1), self.ninp)
                     list4mos.extend(list(torch.chunk(second4mos, self.num4second, 0)))
@@ -124,7 +124,7 @@ class RNNModel(nn.Module):
         output = self.lockdrop(raw_output, self.dropout)
         outputs.append(output)
 
-        latent = nn.functional.tanh(self.latent(output))
+        latent = torch.tanh(self.latent(output))
         #apply same mask to all context vec
         transd = latent.view(raw_output.size(0), raw_output.size(1), self.n_experts, -1).transpose(1, 2).transpose(1, 0).contiguous().view(-1, raw_output.size(1), self.ninp)
         list4mos.extend(list(torch.chunk(transd, self.n_experts, 0)))
@@ -134,9 +134,9 @@ class RNNModel(nn.Module):
         logit = self.decoder(contextvec.view(-1, self.ninp))
 
         prior_logit = self.prior(output).view(-1, self.all_experts)
-        prior = nn.functional.softmax(prior_logit)
+        prior = nn.functional.softmax(prior_logit, -1)
 
-        prob = nn.functional.softmax(logit.view(-1, self.ntoken)).view(-1, self.all_experts, self.ntoken)
+        prob = nn.functional.softmax(logit.view(-1, self.ntoken), -1).view(-1, self.all_experts, self.ntoken)
         prob = (prob * prior.unsqueeze(2).expand_as(prob)).sum(1)
 
         if return_prob:
